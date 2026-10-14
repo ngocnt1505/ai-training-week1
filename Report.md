@@ -156,7 +156,7 @@ test('rejects non-string titles with a ValidationError', () => {
 });
 ```
 
-Phiên bản trước dùng `(title ?? '').trim()`: `undefined`/`null` được xử lý, nhưng `validateTitle(42)` ném `TypeError: title.trim is not a function`, tức là lỗi lập trình lộ ra thay vì lỗi validation. Test trong Mã 2b đỏ với phiên bản đó và xanh với Mã 2 (xem [`evidence/verify.test.js`](evidence/verify.test.js)).
+Phiên bản trước dùng `(title ?? '').trim()`: `undefined`/`null` được xử lý, nhưng `validateTitle(42)` ném `TypeError: title.trim is not a function`, tức là lỗi lập trình lộ ra thay vì lỗi validation. Test trong Mã 2b đỏ với phiên bản đó và xanh với Mã 2.
 
 > *Ghi chú 1.* Test "đúng 100 ký tự" và test "101 ký tự" cần đi cùng nhau. Thiếu một trong hai, sẽ có một kiểu sửa sai ở biên (`>` thành `>=`, hoặc `100` thành `101`) không bị phát hiện.
 >
@@ -478,13 +478,7 @@ Phụ lục này tóm tắt cuộc trò chuyện với Claude (claude.ai) ngày 
 
 Ở một số lượt, việc chạy lại code để kiểm chứng có sự hỗ trợ của một phiên AI thứ hai; các lượt đó được ghi chú rõ.
 
-**Phạm vi tái hiện.** Kho này không chứa code `createTicket`, `save` và bộ test sinh ra trong phiên chat. Vì vậy các con số 9/9, 10/10, 12/12 test và phép đo 34 ms là kết quả *được báo cáo*; bằng chứng là `chat_history.pdf`, không chạy lại được từ kho này. Những khẳng định không phụ thuộc code đó (lỗi kiểu dữ liệu ở Mã 2, độ dài NFD của "ế", `mock.method` bị bỏ qua khi destructuring, hợp đồng UTF-16) có thể chạy lại bằng:
-
-```
-node --test evidence/verify.test.js
-```
-
-(Node.js 20 trở lên; kết quả mong đợi: 5/5 test thành công.)
+**Phạm vi tái hiện.** Kho này không chứa code `createTicket`, `save` và bộ test sinh ra trong phiên chat. Vì vậy các con số 9/9, 10/10, 12/12 test và phép đo 34 ms là kết quả *được báo cáo*; bằng chứng là `chat_history.pdf`, không chạy lại được từ kho này.
 
 ### A.1 Workflow 1: Layered Questioning
 
