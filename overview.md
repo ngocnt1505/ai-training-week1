@@ -16,7 +16,7 @@ Master AI collaboration workflows to apply effectively in subsequent weeks.
 
 ## Training Materials
 
-- AI Training Slides: [`slides-ai-training.md`](../../../slides-ai-training.md) - Mindset & Effective Usage
+- AI Training Slides: *AI Training – Mindset & Effective Usage* (internal training material, not included in this repository)
 
 ## Week 1 Focus: AI Workflows Mastery
 

@@ -126,15 +126,18 @@ Tuy nhiên, lỗi này chỉ cho biết hàm chưa có, chưa chứng minh đư�
 
 **Green.** Viết code tối thiểu: `return title.trim();`. Test thành công. Code chưa xử lý tiêu đề rỗng hay quá dài, và điều đó là có chủ đích vì chưa có test nào yêu cầu. Các kịch bản còn lại lần lượt "kéo" thêm code ra qua các vòng lặp tiếp theo.
 
-**Refactor.** Sau vài vòng, code được tổ chức lại như Mã 2: hằng số `100` được đặt tên, trường hợp `undefined` được xử lý. Toàn bộ test vẫn thành công, chứng tỏ hành vi không thay đổi.
+**Refactor.** Sau vài vòng, code được tổ chức lại như Mã 2: hằng số `100` được đặt tên. Kiểm tra kiểu dữ liệu (`typeof title !== 'string'`) **không** phải refactor: đó là hành vi mới, nên được "kéo" ra bởi một test đỏ riêng (Mã 2b), ứng với mục "không phải chuỗi" trong test list (Bảng 6). Sau đó toàn bộ test vẫn thành công.
 
-**Mã 2. Kết quả sau bước Refactor**
+**Mã 2. Kết quả sau các vòng lặp và bước Refactor**
 
 ```js
 const MAX_TITLE_LENGTH = 100;
 
 function validateTitle(title) {
-  const clean = (title ?? '').trim();
+  if (typeof title !== 'string') {
+    throw new ValidationError('Title must be a string');
+  }
+  const clean = title.trim();
   if (!clean) throw new ValidationError('Title is required');
   if (clean.length > MAX_TITLE_LENGTH) {
     throw new ValidationError(`Title must be at most ${MAX_TITLE_LENGTH} characters`);
@@ -143,7 +146,21 @@ function validateTitle(title) {
 }
 ```
 
-> *Ghi chú.* Test "đúng 100 ký tự" và test "101 ký tự" cần đi cùng nhau. Thiếu một trong hai, sẽ có một kiểu sửa sai ở biên (`>` thành `>=`, hoặc `100` thành `101`) không bị phát hiện.
+**Mã 2b. Test cho input không phải chuỗi**
+
+```js
+test('rejects non-string titles with a ValidationError', () => {
+  for (const bad of [undefined, null, 42, {}, ['x']]) {
+    assert.throws(() => validateTitle(bad), ValidationError);
+  }
+});
+```
+
+Phiên bản trước dùng `(title ?? '').trim()`: `undefined`/`null` được xử lý, nhưng `validateTitle(42)` ném `TypeError: title.trim is not a function`, tức là lỗi lập trình lộ ra thay vì lỗi validation. Test trong Mã 2b đỏ với phiên bản đó và xanh với Mã 2 (xem [`evidence/verify.test.js`](evidence/verify.test.js)).
+
+> *Ghi chú 1.* Test "đúng 100 ký tự" và test "101 ký tự" cần đi cùng nhau. Thiếu một trong hai, sẽ có một kiểu sửa sai ở biên (`>` thành `>=`, hoặc `100` thành `101`) không bị phát hiện.
+>
+> *Ghi chú 2 – "100 ký tự" nghĩa là gì.* Báo cáo chốt hợp đồng: giới hạn tính bằng `String.prototype.length` của tiêu đề **sau khi trim, không chuẩn hóa Unicode**, tức là đếm *UTF-16 code unit*, không phải số ký tự người dùng nhìn thấy. Hệ quả: emoji `😀` tính là 2; chữ `ế` dạng NFC tính là 1 nhưng dạng NFD tính là 3. Nếu muốn đếm theo ký tự hiển thị, phải đổi hợp đồng (ví dụ `[...title.normalize('NFC')].length` hoặc `Intl.Segmenter`) và bổ sung test biên tương ứng.
 
 ### 2.4 Lợi ích và giới hạn
 
@@ -167,11 +184,13 @@ function validateTitle(title) {
 | | Unit | Integration | End-to-end (E2E) |
 |---|---|---|---|
 | **Phạm vi** | Một hàm hoặc module, tách biệt | Nhiều thành phần phối hợp | Toàn hệ thống, như người dùng thật |
-| **Phụ thuộc ngoài** | Không | Một phần thật (file, DB) | Tất cả đều thật |
+| **Phụ thuộc ngoài** | Thường thay hoặc tránh phụ thuộc thật | Một phần thật (file, DB) | Gần như toàn bộ là thật |
 | **Tốc độ** | Rất nhanh | Trung bình | Chậm |
 | **Khi thất bại** | Chỉ ra đúng vị trí lỗi | Tương đối dễ khoanh vùng | Khó xác định lớp gây lỗi |
 | **Số lượng nên có** | Nhiều nhất | Vừa phải | Ít nhất |
 | **Ví dụ** | `parseTickets('{}')` báo lỗi | `save` rồi đọc lại file thật trong thư mục tạm | Chạy `ticket show 99`, kiểm tra exit code và stderr |
+
+Bảng 4 mô tả cách dùng **phổ biến**, không phải định nghĩa tuyệt đối. Ranh giới giữa các cấp độ khác nhau theo từng nhóm: Vocke [4] nhắc đến tranh luận "solitary" và "sociable" unit test (unit test có thể dùng phụ thuộc thật nếu chúng nhanh và ổn định); còn E2E vẫn có thể thay dịch vụ bên ngoài (cổng thanh toán, API bên thứ ba) bằng bản giả. Trong báo cáo này, E2E nghĩa là chạy tiến trình `cli.js` thật với file dữ liệu thật trong thư mục tạm (Mã 5).
 
 ### 3.2 Kim tự tháp test
 
@@ -459,6 +478,14 @@ Phụ lục này tóm tắt cuộc trò chuyện với Claude (claude.ai) ngày 
 
 Ở một số lượt, việc chạy lại code để kiểm chứng có sự hỗ trợ của một phiên AI thứ hai; các lượt đó được ghi chú rõ.
 
+**Phạm vi tái hiện.** Kho này không chứa code `createTicket`, `save` và bộ test sinh ra trong phiên chat. Vì vậy các con số 9/9, 10/10, 12/12 test và phép đo 34 ms là kết quả *được báo cáo*; bằng chứng là `chat_history.pdf`, không chạy lại được từ kho này. Những khẳng định không phụ thuộc code đó (lỗi kiểu dữ liệu ở Mã 2, độ dài NFD của "ế", `mock.method` bị bỏ qua khi destructuring, hợp đồng UTF-16) có thể chạy lại bằng:
+
+```
+node --test evidence/verify.test.js
+```
+
+(Node.js 20 trở lên; kết quả mong đợi: 5/5 test thành công.)
+
 ### A.1 Workflow 1: Layered Questioning
 
 #### Tầng 1 – Research
@@ -680,7 +707,7 @@ Bước đầu tiên của Canon TDD: liệt kê các kịch bản cần test tr
 ### B.2 Các cấp độ test
 
 **Câu 5. Phân biệt unit, integration và E2E test.**
-Unit: một hàm hoặc module, không phụ thuộc thật, rất nhanh. Integration: nhiều thành phần phối hợp, có phụ thuộc thật như file. E2E: toàn hệ thống như người dùng thật (Bảng 4).
+Unit: một hàm hoặc module, thường không dùng phụ thuộc thật, rất nhanh. Integration: nhiều thành phần phối hợp, có phụ thuộc thật như file. E2E: toàn hệ thống như người dùng thật. Đây là cách dùng phổ biến, không phải định nghĩa tuyệt đối (Bảng 4 và phần giải thích bên dưới).
 
 **Câu 6. Kim tự tháp test là gì?**
 Mô hình của Mike Cohn: nhiều unit test, vừa phải integration test, ít E2E test, vì unit test nhanh, ổn định và chỉ ra đúng vị trí lỗi.
